@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b14"><meta name="description" content="DM Accessories Mobile Repairing shop manager">
+<link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg">
+<title>DM Shop Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<main class="shell">
+  <header class="topbar"><div class="brandmark">DM</div><div class="brand"><b>DM SHOP MANAGER</b><span>ACCESSORIES • MOBILE REPAIRING</span></div><button id="logoutBtn" class="icon-btn hidden" aria-label="Logout">↗</button></header>
+  <section id="setupNotice" class="notice hidden"><b>One-time setup required</b><p>Add your Supabase Project URL and Publishable/anon key in <code>config.js</code>, then reload this app.</p></section>
+  <section id="authView" class="auth card">
+    <div class="eyebrow">IOS OR ANDROID SPECIALIST</div><h1>Welcome back<span class="blue">.</span></h1><p class="muted">Sign in to manage your shop's daily hisab.</p>
+    <label>Email address</label><input id="email" type="email" placeholder="you@example.com" autocomplete="username">
+    <label>Password</label><input id="password" type="password" placeholder="Enter password" autocomplete="current-password">
+    <button id="loginBtn" class="primary">Sign in <span>→</span></button><p id="authMsg" class="message"></p>
+    <div class="auth-foot">Private access • Invite-only staff accounts</div>
+  </section>
+  <section id="appView" class="hidden">
+    <div class="welcome"><div><div class="eyebrow">SHOP OVERVIEW</div><h1>Daily hisab<span class="blue">.</span></h1><p class="muted" id="todayLabel"></p></div><div class="avatar">DM</div></div>
+    <div class="stats">
+      <article class="stat"><span>Today's income</span><strong id="incomeTotal">₹0</strong><small>Money received</small></article>
+      <article class="stat"><span>Today's expense</span><strong id="expenseTotal">₹0</strong><small>Money spent</small></article>
+      <article class="stat balance"><span>Net balance</span><strong id="balanceTotal">₹0</strong><small>Income − expense</small></article>
+    </div>
+    <section class="card entry-card"><div class="section-head"><div><div class="eyebrow">QUICK ENTRY</div><h2>Add transaction</h2></div><div class="plus">＋</div></div>
+      <div class="segmented"><button class="seg active" data-kind="income">＋ Income</button><button class="seg" data-kind="expense">− Expense</button></div>
+      <div class="form-grid"><div class="field wide"><label>Description</label><input id="description" placeholder="e.g. Display replacement"></div>
+      <div class="field"><label>Amount (₹)</label><input id="amount" type="number" min="1" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Category</label><select id="category"><option>Repairing</option><option>Accessories</option><option>Display</option><option>Battery</option><option>Other</option></select></div>
+      <div class="field wide"><label>Date</label><input id="entryDate" type="date"></div></div>
+      <button id="saveBtn" class="primary">Save transaction <span>→</span></button><p id="entryMsg" class="message"></p>
+    </section>
+    <section class="card history-card"><div class="section-head"><div><div class="eyebrow">YOUR RECORDS</div><h2>Recent transactions</h2></div><button id="refreshBtn" class="text-btn">Refresh ↻</button></div>
+      <div id="records" class="records"><div class="empty">Your transactions will appear here.</div></div>
+    </section>
+    <p class="footer-note">DM ACCESSORIES MOBILE REPAIRING <span>•</span> Secure shop workspace</p>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="config.js"></script><script src="app.js"></script>
+</body></html>
