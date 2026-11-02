@@ -1,5 +1,3 @@
-// DM Shop Manager - Supabase Configuration
+window.DM_SUPABASE_URL = "https://pahnhteazqnpsftwwwah.supabase.co";
 
-window.DM_SUPABASE_URL = "https://thprjiifggtsgntpsqen.supabase.co";
-
-window.DM_SUPABASE_ANON_KEY = "sb_publishable_vvNZnF7MTnCD5t_4bKOgdw__EWKiHbx";
+window.DM_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBhcWhudGVhenFucHN0Znd3d2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTM0NjU4OTAsImV4cCI6MjEwOTA0MTg5MH0.J7rZFZIjCKmASNAiH2bRqz7O5w2_i2IGvVL7ta6R9NM";
