@@ -98,3 +98,19 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #55a7ff18
 .auth{margin-top:30px}
 .seg{font-size:11px}
 }
+.delete-btn {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid #7f2634;
+  border-radius: 12px;
+  background: #35141c;
+  color: #ff6879;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
