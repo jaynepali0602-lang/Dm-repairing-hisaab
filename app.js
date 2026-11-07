@@ -292,3 +292,29 @@
 
   startApp();
 })();
+// DELETE HISTORY ENTRY
+async function deleteHistory(id) {
+  const confirmDelete = confirm(
+    "Kya aap ye history entry delete karna chahte ho?"
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+    const { error } = await client
+      .from("transactions")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+
+    alert("History deleted successfully!");
+
+    // Refresh history and dashboard
+    loadHistory();
+    loadDashboard();
+
+  } catch (error) {
+    alert("Delete failed: " + error.message);
+  }
+}
