@@ -1,3 +1,4 @@
+
 (() => {
 "use strict";
 
@@ -8,319 +9,426 @@ const key = window.DM_SUPABASE_ANON_KEY;
 
 let client = null;
 let kind = "income";
+let activeFilter = "all";
+let records = [];
 let loading = false;
 
 const today = (() => {
-const d = new Date();
-return [
-d.getFullYear(),
-String(d.getMonth() + 1).padStart(2, "0"),
-String(d.getDate()).padStart(2, "0")
-].join("-");
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0")
+  ].join("-");
 })();
 
-const money = n =>
-"₹" + Number(n || 0).toLocaleString("en-IN", {
-maximumFractionDigits: 2
+const money = n => "₹" + Number(n || 0).toLocaleString("en-IN", {
+  maximumFractionDigits: 2
 });
 
-function msg(id, text) {
-$(id).textContent = text || "";
+function msg(id, value) {
+  $(id).textContent = value || "";
 }
 
 function escapeHtml(value) {
-return String(value ?? "").replace(/[&<>"']/g, c => ({
-"&": "&",
-"<": "<",
-">": ">",
-'"': """,
-"'": "'"
-})[c]);
+  return String(value ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  })[c]);
+}
+
+function toast(message) {
+  const el = $("toast");
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), 2500);
 }
 
 function showAuth() {
-$("authView").classList.remove("hidden");
-$("appView").classList.add("hidden");
-$("logoutBtn").classList.add("hidden");
+  $("authView").classList.remove("hidden");
+  $("appView").classList.add("hidden");
+  $("logoutBtn").classList.add("hidden");
 }
 
 async function showApp() {
-$("authView").classList.add("hidden");
-$("appView").classList.remove("hidden");
-$("logoutBtn").classList.remove("hidden");
-await loadRecords();
+  $("authView").classList.add("hidden");
+  $("appView").classList.remove("hidden");
+  $("logoutBtn").classList.remove("hidden");
+  await loadRecords();
+}
+
+function updateKindFields() {
+  const ledger = kind === "udhar" || kind === "jama";
+
+  $("personField").classList.toggle("hidden", !ledger);
+  $("itemField").classList.toggle("hidden", !ledger);
+
+  $("saveBtn").innerHTML =
+    (kind === "udhar" ? "Save Udhar" :
+    kind === "jama" ? "Save Jama" :
+    kind === "expense" ? "Save Expense" :
+    "Save transaction") + " <span>→</span>";
+}
+
+function updateDashboard() {
+  let income = 0;
+  let expense = 0;
+  let udhar = 0;
+  let jama = 0;
+
+  records.forEach(r => {
+    const amount = Number(r.amount || 0);
+
+    if (r.entry_date === today) {
+      if (r.kind === "income") income += amount;
+      if (r.kind === "expense") expense += amount;
+    }
+
+    if (r.kind === "udhar") udhar += amount;
+    if (r.kind === "jama") jama += amount;
+  });
+
+  $("incomeTotal").textContent = money(income);
+  $("expenseTotal").textContent = money(expense);
+  $("balanceTotal").textContent = money(income - expense);
+  $("udharTotal").textContent = money(udhar);
+  $("jamaTotal").textContent = money(jama);
+}
+
+function getKindName(value) {
+  return ({
+    income: "Income",
+    expense: "Expense",
+    udhar: "Udhar",
+    jama: "Jama"
+  })[value] || value;
+}
+
+function renderRecords() {
+  const filtered = activeFilter === "all"
+    ? records
+    : records.filter(r => r.kind === activeFilter);
+
+  if (!filtered.length) {
+    $("records").innerHTML =
+      '<div class="empty">No transactions found.</div>';
+    return;
+  }
+
+  $("records").innerHTML = filtered.map(r => {
+    const positive = r.kind === "income" || r.kind === "jama";
+    const date = r.entry_date
+      ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
+      : "Date unavailable";
+
+    const extra = r.person_name
+      ? `<small>${escapeHtml(r.person_name)}</small>`
+      : "";
+
+    return `
+      <div class="record" data-id="${escapeHtml(r.id)}">
+        <div class="record-icon ${positive ? "" : "out"}">
+          ${r.kind === "income" ? "↙" :
+            r.kind === "expense" ? "↗" :
+            r.kind === "udhar" ? "−" : "+"}
+        </div>
+
+        <div class="record-info">
+          <b>${escapeHtml(r.description)}</b>
+          <small>
+            ${escapeHtml(getKindName(r.kind))}
+            • ${escapeHtml(r.category || "Other")}
+            • ${escapeHtml(date)}
+          </small>
+          ${extra}
+        </div>
+
+        <div class="record-amount ${positive ? "in" : "out-amount"}">
+          ${positive ? "+" : "−"}${money(r.amount)}
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 async function loadRecords() {
-if (!client || loading) return;
+  if (!client || loading) return;
 
-loading = true;
-$("refreshBtn").disabled = true;
+  loading = true;
+  $("refreshBtn").disabled = true;
 
-try {
-const { data, error } = await client
-.from("transactions")
-.select("id,description,amount,kind,category,entry_date,created_at")
-.order("created_at", { ascending: false })
-.limit(100);
+  try {
+    const { data, error } = await client
+      .from("transactions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500);
 
-if (error) throw error;
+    if (error) throw error;
 
-let income = 0;
-let expense = 0;
-const records = data || [];
+    records = data || [];
+    updateDashboard();
+    renderRecords();
 
-records.forEach(r => {
-if (r.entry_date === today) {
-if (r.kind === "income") income += Number(r.amount);
-if (r.kind === "expense") expense += Number(r.amount);
-}
-});
-
-$("incomeTotal").textContent = money(income);
-$("expenseTotal").textContent = money(expense);
-$("balanceTotal").textContent = money(income - expense);
-
-if (!records.length) {
-$("records").innerHTML =
-'<div class="empty">No transactions yet.</div>';
-return;
-}
-
-$("records").innerHTML = records.map(r => {
-const isIncome = r.kind === "income";
-const date = r.entry_date
-? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
-: "Date unavailable";
-
-return `    
-  <div class="record">    
-    <div class="record-icon ${isIncome ? "" : "out"}">    
-      ${isIncome ? "↙" : "↗"}    
-    </div>    
-
-    <div class="record-info">    
-      <b>${escapeHtml(r.description)}</b>    
-      <small>    
-        ${escapeHtml(r.category || "Other")}    
-        • ${escapeHtml(date)}    
-      </small>    
-    </div>    
-
-    <div class="record-amount ${isIncome ? "in" : "out-amount"}">    
-      ${isIncome ? "+" : "−"}${money(r.amount)}    
-    </div>    
-  </div>    
-`;
-
-}).join("");
-
-} catch (error) {
-$("records").innerHTML =
-'<div class="empty">Could not load records: ' +
-escapeHtml(error.message) + "</div>";
-} finally {
-loading = false;
-$("refreshBtn").disabled = false;
-}
-
+  } catch (error) {
+    $("records").innerHTML =
+      `<div class="empty">Could not load records: ${escapeHtml(error.message)}</div>`;
+  } finally {
+    loading = false;
+    $("refreshBtn").disabled = false;
+  }
 }
 
 async function login() {
-const email = $("email").value.trim();
-const password = $("password").value;
+  const email = $("email").value.trim();
+  const password = $("password").value;
 
-if (!email || !password) {
-msg("authMsg", "Enter email and password.");
-return;
-}
+  if (!email || !password) {
+    msg("authMsg", "Enter email and password.");
+    return;
+  }
 
-$("loginBtn").disabled = true;
-msg("authMsg", "Signing in...");
+  $("loginBtn").disabled = true;
+  msg("authMsg", "Signing in...");
 
-try {
-const { error } = await client.auth.signInWithPassword({
-email,
-password
-});
+  try {
+    const { error } = await client.auth.signInWithPassword({
+      email,
+      password
+    });
 
-if (error) {
-msg("authMsg", error.message);
-return;
-}
+    if (error) throw error;
 
-msg("authMsg", "");
-await showApp();
+    msg("authMsg", "");
+    await showApp();
 
-} catch (error) {
-msg("authMsg", error.message || "Login failed.");
-} finally {
-$("loginBtn").disabled = false;
-}
-
+  } catch (error) {
+    msg("authMsg", error.message);
+  } finally {
+    $("loginBtn").disabled = false;
+  }
 }
 
 async function logout() {
-const { error } = await client.auth.signOut();
+  const { error } = await client.auth.signOut();
 
-if (error) {
-msg("authMsg", error.message);
-return;
-}
+  if (error) {
+    msg("authMsg", error.message);
+    return;
+  }
 
-showAuth();
-
+  records = [];
+  showAuth();
 }
 
 async function saveTransaction() {
-const description = $("description").value.trim();
-const amount = Number($("amount").value);
-const date = $("entryDate").value;
-const category = $("category").value;
+  const description = $("description").value.trim();
+  const amount = Number($("amount").value);
+  const date = $("entryDate").value;
+  const category = $("category").value;
 
-if (!description || !Number.isFinite(amount) ||
-amount <= 0 || !date) {
-msg("entryMsg", "Enter valid description, amount and date.");
-return;
+  const person = $("personName").value.trim();
+  const item = $("itemName").value.trim();
+  const paymentMode = $("paymentMode").value;
+  const notes = $("notes").value.trim();
+
+  if (!description || !Number.isFinite(amount) ||
+      amount <= 0 || !date) {
+    msg("entryMsg", "Enter valid description, amount and date.");
+    return;
+  }
+
+  if ((kind === "udhar" || kind === "jama") && !person) {
+    msg("entryMsg", "Enter person or supplier name.");
+    return;
+  }
+
+  $("saveBtn").disabled = true;
+  msg("entryMsg", "Saving transaction...");
+
+  try {
+    const { data: userData, error: userError } =
+      await client.auth.getUser();
+
+    if (userError) throw userError;
+    if (!userData.user) throw new Error("Please login again.");
+
+    const entry = {
+      description,
+      amount,
+      kind,
+      category,
+      entry_date: date,
+      user_id: userData.user.id,
+      person_name: person || null,
+      item_name: item || null,
+      payment_mode: paymentMode,
+      notes: notes || null
+    };
+
+    const { error } = await client
+      .from("transactions")
+      .insert(entry);
+
+    if (error) throw error;
+
+    msg("entryMsg", "Saved successfully!");
+
+    $("description").value = "";
+    $("amount").value = "";
+    $("personName").value = "";
+    $("itemName").value = "";
+    $("notes").value = "";
+
+    await loadRecords();
+    toast("Transaction saved successfully!");
+
+  } catch (error) {
+    msg("entryMsg", error.message || "Saving failed.");
+  } finally {
+    $("saveBtn").disabled = false;
+  }
 }
 
-$("saveBtn").disabled = true;
-msg("entryMsg", "Saving...");
+function showDetails(id) {
+  const r = records.find(item => String(item.id) === String(id));
+  if (!r) return;
 
-try {
-const { data: userData, error: userError } =
-await client.auth.getUser();
+  const date = r.entry_date
+    ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
+    : "Unavailable";
 
-if (userError) throw userError;
-if (!userData.user) throw new Error("Please login again.");
+  const fields = [
+    ["Description", r.description],
+    ["Transaction type", getKindName(r.kind)],
+    ["Amount", money(r.amount)],
+    ["Person / Supplier", r.person_name],
+    ["Item / Spare", r.item_name],
+    ["Category", r.category],
+    ["Payment mode", r.payment_mode],
+    ["Date", date],
+    ["Notes", r.notes]
+  ];
 
-const { error } = await client
-.from("transactions")
-.insert({
-description,
-amount,
-kind,
-category,
-entry_date: date,
-user_id: userData.user.id
-});
+  $("detailContent").innerHTML = fields.map(([label, value]) => `
+    <div class="detail-row">
+      <span>${escapeHtml(label)}</span>
+      <b>${escapeHtml(value || "—")}</b>
+    </div>
+  `).join("");
 
-if (error) throw error;
-
-msg("entryMsg", "Saved successfully!");
-$("description").value = "";
-$("amount").value = "";
-
-await loadRecords();
-
-} catch (error) {
-msg("entryMsg", error.message || "Saving failed.");
-} finally {
-$("saveBtn").disabled = false;
+  $("detailModal").classList.remove("hidden");
 }
 
+function closeDetails() {
+  $("detailModal").classList.add("hidden");
 }
 
 function startApp() {
-$("entryDate").value = today;
+  $("entryDate").value = today;
 
-$("todayLabel").textContent =
-new Date().toLocaleDateString("en-IN", {
-weekday: "long",
-day: "numeric",
-month: "long",
-year: "numeric"
-});
+  $("todayLabel").textContent =
+    new Date().toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
 
-if (!url || !key ||
-url.includes("PASTE_") || key.includes("PASTE_")) {
-$("setupNotice").classList.remove("hidden");
-$("loginBtn").disabled = true;
-msg("authMsg", "Complete Supabase setup in config.js.");
-return;
-}
+  if (!url || !key ||
+      url.includes("PASTE_") || key.includes("PASTE_")) {
+    $("setupNotice").classList.remove("hidden");
+    $("loginBtn").disabled = true;
+    msg("authMsg", "Complete Supabase setup in config.js.");
+    return;
+  }
 
-if (!window.supabase) {
-msg("authMsg", "Supabase library not loaded.");
-return;
-}
+  if (!window.supabase) {
+    msg("authMsg", "Supabase library not loaded.");
+    return;
+  }
 
-client = window.supabase.createClient(url, key, {
-auth: {
-persistSession: true,
-autoRefreshToken: true,
-detectSessionInUrl: true
-}
-});
+  client = window.supabase.createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
 
-$("loginBtn").addEventListener("click", login);
-$("logoutBtn").addEventListener("click", logout);
-$("saveBtn").addEventListener("click", saveTransaction);
-$("refreshBtn").addEventListener("click", loadRecords);
+  $("loginBtn").addEventListener("click", login);
+  $("logoutBtn").addEventListener("click", logout);
+  $("saveBtn").addEventListener("click", saveTransaction);
+  $("refreshBtn").addEventListener("click", loadRecords);
+  $("closeModal").addEventListener("click", closeDetails);
 
-document.querySelectorAll(".seg").forEach(button => {
-button.addEventListener("click", () => {
-kind = button.dataset.kind;
+  $("detailModal").addEventListener("click", event => {
+    if (event.target === $("detailModal")) closeDetails();
+  });
 
-document.querySelectorAll(".seg").forEach(item => {    
-  item.classList.toggle("active", item === button);    
-});
+  $("records").addEventListener("click", event => {
+    const record = event.target.closest(".record");
+    if (record) showDetails(record.dataset.id);
+  });
 
-});
-});
+  document.querySelectorAll(".seg").forEach(button => {
+    button.addEventListener("click", () => {
+      kind = button.dataset.kind;
 
-client.auth.getSession().then(({ data, error }) => {
-if (error) throw error;
+      document.querySelectorAll(".seg").forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
 
-if (data.session) showApp();
-else showAuth();
+      updateKindFields();
+      msg("entryMsg", "");
+    });
+  });
 
-}).catch(error => {
-showAuth();
-msg("authMsg", error.message);
-});
+  document.querySelectorAll(".filter").forEach(button => {
+    button.addEventListener("click", () => {
+      activeFilter = button.dataset.filter;
 
-client.auth.onAuthStateChange((event, session) => {
-if (event === "SIGNED_OUT" || !session) {
-showAuth();
-}
-});
+      document.querySelectorAll(".filter").forEach(item => {
+        item.classList.toggle("active", item === button);
+      });
 
-if ("serviceWorker" in navigator) {
-window.addEventListener("load", () => {
-navigator.serviceWorker
-.register("./sw.js")
-.catch(() => {});
-});
-}
+      renderRecords();
+    });
+  });
 
+  client.auth.getSession().then(({ data, error }) => {
+    if (error) throw error;
+
+    if (data.session) showApp();
+    else showAuth();
+
+  }).catch(error => {
+    showAuth();
+    msg("authMsg", error.message);
+  });
+
+  client.auth.onAuthStateChange((event, session) => {
+    if (event === "SIGNED_OUT" || !session) {
+      records = [];
+      showAuth();
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("./sw.js")
+        .catch(() => {});
+    });
+  }
+
+  updateKindFields();
 }
 
 startApp();
+
 })();
-// DELETE HISTORY ENTRY
-async function deleteHistory(id) {
-const confirmDelete = confirm(
-"Kya aap ye history entry delete karna chahte ho?"
-);
-
-if (!confirmDelete) return;
-
-try {
-const { error } = await client
-.from("transactions")
-.delete()
-.eq("id", id);
-
-if (error) throw error;
-
-alert("History deleted successfully!");
-
-// Refresh history and dashboard
-loadHistory();
-loadDashboard();
-
-} catch (error) {
-alert("Delete failed: " + error.message);
-}
-}
