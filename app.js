@@ -65,16 +65,10 @@
         .order("created_at", { ascending: false })
         .limit(100);
 
-      if (error) {
-        $("records").innerHTML =
-          '<div class="empty">Database Error: ' +
-          escapeHtml(error.message) + "</div>";
-        return;
-      }
+      if (error) throw error;
 
       let income = 0;
       let expense = 0;
-
       const records = data || [];
 
       records.forEach(r => {
@@ -96,36 +90,87 @@
 
       $("records").innerHTML = records.map(r => {
         const isIncome = r.kind === "income";
+        const date = r.entry_date
+          ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
+          : "Date unavailable";
 
         return `
           <div class="record">
             <div class="record-icon ${isIncome ? "" : "out"}">
               ${isIncome ? "↙" : "↗"}
             </div>
+
             <div class="record-info">
               <b>${escapeHtml(r.description)}</b>
               <small>
                 ${escapeHtml(r.category || "Other")}
-                •
-                ${new Date(r.entry_date + "T00:00:00")
-                  .toLocaleDateString("en-IN")}
+                • ${escapeHtml(date)}
               </small>
             </div>
+
             <div class="record-amount ${isIncome ? "in" : "out-amount"}">
               ${isIncome ? "+" : "−"}${money(r.amount)}
             </div>
+
+            <button
+              type="button"
+              class="delete-btn"
+              data-delete-id="${escapeHtml(r.id)}"
+              aria-label="Delete transaction"
+              title="Delete transaction">
+              🗑️
+            </button>
           </div>
         `;
       }).join("");
 
     } catch (error) {
       $("records").innerHTML =
-        '<div class="empty">' +
-        escapeHtml(error.message || "Could not load records.") +
-        "</div>";
+        '<div class="empty">Could not load records: ' +
+        escapeHtml(error.message) + "</div>";
     } finally {
       loading = false;
       $("refreshBtn").disabled = false;
+    }
+  }
+
+  async function deleteTransaction(id, button) {
+    if (!id || !client) return;
+
+    if (!confirm("Kya aap ye transaction permanently delete karna chahte hain?")) {
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = "…";
+
+    try {
+      const { data: userData, error: userError } =
+        await client.auth.getUser();
+
+      if (userError) throw userError;
+      if (!userData.user) throw new Error("Please login again.");
+
+      const { data, error } = await client
+        .from("transactions")
+        .delete()
+        .eq("id", id)
+        .eq("user_id", userData.user.id)
+        .select("id");
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        throw new Error("Delete nahi hua. Permission check karo.");
+      }
+
+      msg("entryMsg", "Transaction deleted successfully!");
+      await loadRecords();
+
+    } catch (error) {
+      alert("Delete failed: " + (error.message || "Unknown error"));
+      button.disabled = false;
+      button.textContent = "🗑️";
     }
   }
 
@@ -143,8 +188,7 @@
 
     try {
       const { error } = await client.auth.signInWithPassword({
-        email,
-        password
+        email, password
       });
 
       if (error) {
@@ -193,12 +237,7 @@
         await client.auth.getUser();
 
       if (userError) throw userError;
-
-      if (!userData.user) {
-        msg("entryMsg", "Please login again.");
-        showAuth();
-        return;
-      }
+      if (!userData.user) throw new Error("Please login again.");
 
       const { error } = await client
         .from("transactions")
@@ -214,7 +253,6 @@
       if (error) throw error;
 
       msg("entryMsg", "Saved successfully!");
-
       $("description").value = "";
       $("amount").value = "";
 
@@ -264,6 +302,14 @@
     $("saveBtn").addEventListener("click", saveTransaction);
     $("refreshBtn").addEventListener("click", loadRecords);
 
+    // Delete button event
+    $("records").addEventListener("click", event => {
+      const button = event.target.closest(".delete-btn");
+      if (!button) return;
+
+      deleteTransaction(button.dataset.deleteId, button);
+    });
+
     document.querySelectorAll(".seg").forEach(button => {
       button.addEventListener("click", () => {
         kind = button.dataset.kind;
@@ -277,11 +323,9 @@
     client.auth.getSession().then(({ data, error }) => {
       if (error) throw error;
 
-      if (data.session) {
-        showApp();
-      } else {
-        showAuth();
-      }
+      if (data.session) showApp();
+      else showAuth();
+
     }).catch(error => {
       showAuth();
       msg("authMsg", error.message);
@@ -304,3 +348,27 @@
 
   startApp();
 })();
+      
+.record {
+  gap: 10px;
+}
+
+.delete-btn {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 80, 80, 0.25);
+  background: rgba(255, 60, 60, 0.10);
+  color: #ff5b65;
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.delete-btn:active {
+  transform: scale(0.94);
+}
+
+.delete-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
