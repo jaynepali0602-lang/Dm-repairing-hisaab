@@ -3,7 +3,6 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
-
 const url = window.DM_SUPABASE_URL;
 const key = window.DM_SUPABASE_ANON_KEY;
 
@@ -27,7 +26,8 @@ const money = n => "₹" + Number(n || 0).toLocaleString("en-IN", {
 });
 
 function msg(id, value) {
-  $(id).textContent = value || "";
+  const el = $(id);
+  if (el) el.textContent = value || "";
 }
 
 function escapeHtml(value) {
@@ -61,19 +61,76 @@ async function showApp() {
   await loadRecords();
 }
 
+// LOGIN
+async function login() {
+  if (!client) {
+    msg("authMsg", "Supabase connection not ready. Check config.js.");
+    return;
+  }
+
+  const email = $("email").value.trim();
+  const password = $("password").value;
+
+  if (!email || !password) {
+    msg("authMsg", "Enter email and password.");
+    return;
+  }
+
+  $("loginBtn").disabled = true;
+  msg("authMsg", "Signing in...");
+
+  try {
+    const { error } = await client.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) throw error;
+
+    msg("authMsg", "Login successful!");
+    await showApp();
+
+  } catch (error) {
+    msg("authMsg", error.message || "Login failed.");
+  } finally {
+    $("loginBtn").disabled = false;
+  }
+}
+
+// LOGOUT
+async function logout() {
+  if (!client) return;
+
+  try {
+    const { error } = await client.auth.signOut();
+    if (error) throw error;
+
+    records = [];
+    showAuth();
+
+  } catch (error) {
+    msg("authMsg", error.message);
+  }
+}
+
+// TRANSACTION TYPE
 function updateKindFields() {
   const ledger = kind === "udhar" || kind === "jama";
 
   $("personField").classList.toggle("hidden", !ledger);
   $("itemField").classList.toggle("hidden", !ledger);
 
-  $("saveBtn").innerHTML =
-    (kind === "udhar" ? "Save Udhar" :
-    kind === "jama" ? "Save Jama" :
-    kind === "expense" ? "Save Expense" :
-    "Save transaction") + " <span>→</span>";
+  const labels = {
+    income: "Save transaction",
+    expense: "Save expense",
+    udhar: "Save Udhar",
+    jama: "Save Jama"
+  };
+
+  $("saveBtn").innerHTML = labels[kind] + " <span>→</span>";
 }
 
+// DASHBOARD
 function updateDashboard() {
   let income = 0;
   let expense = 0;
@@ -99,7 +156,7 @@ function updateDashboard() {
   $("jamaTotal").textContent = money(jama);
 }
 
-function getKindName(value) {
+function kindName(value) {
   return ({
     income: "Income",
     expense: "Expense",
@@ -108,6 +165,7 @@ function getKindName(value) {
   })[value] || value;
 }
 
+// HISTORY
 function renderRecords() {
   const filtered = activeFilter === "all"
     ? records
@@ -121,13 +179,10 @@ function renderRecords() {
 
   $("records").innerHTML = filtered.map(r => {
     const positive = r.kind === "income" || r.kind === "jama";
+
     const date = r.entry_date
       ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
       : "Date unavailable";
-
-    const extra = r.person_name
-      ? `<small>${escapeHtml(r.person_name)}</small>`
-      : "";
 
     return `
       <div class="record" data-id="${escapeHtml(r.id)}">
@@ -140,11 +195,14 @@ function renderRecords() {
         <div class="record-info">
           <b>${escapeHtml(r.description)}</b>
           <small>
-            ${escapeHtml(getKindName(r.kind))}
+            ${escapeHtml(kindName(r.kind))}
             • ${escapeHtml(r.category || "Other")}
             • ${escapeHtml(date)}
           </small>
-          ${extra}
+
+          ${r.person_name
+            ? `<small>${escapeHtml(r.person_name)}</small>`
+            : ""}
         </div>
 
         <div class="record-amount ${positive ? "in" : "out-amount"}">
@@ -155,6 +213,7 @@ function renderRecords() {
   }).join("");
 }
 
+// LOAD HISTORY
 async function loadRecords() {
   if (!client || loading) return;
 
@@ -171,61 +230,26 @@ async function loadRecords() {
     if (error) throw error;
 
     records = data || [];
+
     updateDashboard();
     renderRecords();
 
   } catch (error) {
     $("records").innerHTML =
-      `<div class="empty">Could not load records: ${escapeHtml(error.message)}</div>`;
+      `<div class="empty">Error: ${escapeHtml(error.message)}</div>`;
   } finally {
     loading = false;
     $("refreshBtn").disabled = false;
   }
 }
 
-async function login() {
-  const email = $("email").value.trim();
-  const password = $("password").value;
-
-  if (!email || !password) {
-    msg("authMsg", "Enter email and password.");
-    return;
-  }
-
-  $("loginBtn").disabled = true;
-  msg("authMsg", "Signing in...");
-
-  try {
-    const { error } = await client.auth.signInWithPassword({
-      email,
-      password
-    });
-
-    if (error) throw error;
-
-    msg("authMsg", "");
-    await showApp();
-
-  } catch (error) {
-    msg("authMsg", error.message);
-  } finally {
-    $("loginBtn").disabled = false;
-  }
-}
-
-async function logout() {
-  const { error } = await client.auth.signOut();
-
-  if (error) {
-    msg("authMsg", error.message);
-    return;
-  }
-
-  records = [];
-  showAuth();
-}
-
+// SAVE TRANSACTION
 async function saveTransaction() {
+  if (!client) {
+    msg("entryMsg", "Supabase connection unavailable.");
+    return;
+  }
+
   const description = $("description").value.trim();
   const amount = Number($("amount").value);
   const date = $("entryDate").value;
@@ -294,6 +318,7 @@ async function saveTransaction() {
   }
 }
 
+// TRANSACTION DETAILS
 function showDetails(id) {
   const r = records.find(item => String(item.id) === String(id));
   if (!r) return;
@@ -304,7 +329,7 @@ function showDetails(id) {
 
   const fields = [
     ["Description", r.description],
-    ["Transaction type", getKindName(r.kind)],
+    ["Transaction type", kindName(r.kind)],
     ["Amount", money(r.amount)],
     ["Person / Supplier", r.person_name],
     ["Item / Spare", r.item_name],
@@ -328,39 +353,18 @@ function closeDetails() {
   $("detailModal").classList.add("hidden");
 }
 
+// START APP
 function startApp() {
-  $("entryDate").value = today;
 
-  $("todayLabel").textContent =
-    new Date().toLocaleDateString("en-IN", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    });
-
-  if (!url || !key ||
-      url.includes("PASTE_") || key.includes("PASTE_")) {
-    $("setupNotice").classList.remove("hidden");
-    $("loginBtn").disabled = true;
-    msg("authMsg", "Complete Supabase setup in config.js.");
-    return;
-  }
-
-  if (!window.supabase) {
-    msg("authMsg", "Supabase library not loaded.");
-    return;
-  }
-
-  client = window.supabase.createClient(url, key, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true
-    }
-  });
+  // Events are attached BEFORE checking configuration.
+  // This ensures the Sign in button always responds.
 
   $("loginBtn").addEventListener("click", login);
+
+  $("password").addEventListener("keydown", event => {
+    if (event.key === "Enter") login();
+  });
+
   $("logoutBtn").addEventListener("click", logout);
   $("saveBtn").addEventListener("click", saveTransaction);
   $("refreshBtn").addEventListener("click", loadRecords);
@@ -400,11 +404,53 @@ function startApp() {
     });
   });
 
+  $("entryDate").value = today;
+
+  $("todayLabel").textContent =
+    new Date().toLocaleDateString("en-IN", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+
+  updateKindFields();
+
+  if (!url || !key ||
+      url.includes("PASTE_") || key.includes("PASTE_")) {
+
+    $("setupNotice").classList.remove("hidden");
+    $("loginBtn").disabled = false;
+    msg("authMsg", "Check Supabase configuration in config.js.");
+    return;
+  }
+
+  if (!window.supabase) {
+    msg("authMsg", "Supabase library not loaded. Check internet connection.");
+    return;
+  }
+
+  try {
+    client = window.supabase.createClient(url, key, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
+    });
+  } catch (error) {
+    msg("authMsg", "Connection error: " + error.message);
+    return;
+  }
+
   client.auth.getSession().then(({ data, error }) => {
     if (error) throw error;
 
-    if (data.session) showApp();
-    else showAuth();
+    if (data.session) {
+      showApp();
+    } else {
+      showAuth();
+    }
 
   }).catch(error => {
     showAuth();
@@ -412,7 +458,7 @@ function startApp() {
   });
 
   client.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT" || !session) {
+    if (event === "SIGNED_OUT") {
       records = [];
       showAuth();
     }
@@ -425,10 +471,9 @@ function startApp() {
         .catch(() => {});
     });
   }
-
-  updateKindFields();
 }
 
 startApp();
 
 })();
+      
