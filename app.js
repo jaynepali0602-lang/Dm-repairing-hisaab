@@ -111,15 +111,6 @@
             <div class="record-amount ${isIncome ? "in" : "out-amount"}">
               ${isIncome ? "+" : "−"}${money(r.amount)}
             </div>
-
-            <button
-              type="button"
-              class="delete-btn"
-              data-delete-id="${escapeHtml(r.id)}"
-              aria-label="Delete transaction"
-              title="Delete transaction">
-              🗑️
-            </button>
           </div>
         `;
       }).join("");
@@ -131,46 +122,6 @@
     } finally {
       loading = false;
       $("refreshBtn").disabled = false;
-    }
-  }
-
-  async function deleteTransaction(id, button) {
-    if (!id || !client) return;
-
-    if (!confirm("Kya aap ye transaction permanently delete karna chahte hain?")) {
-      return;
-    }
-
-    button.disabled = true;
-    button.textContent = "…";
-
-    try {
-      const { data: userData, error: userError } =
-        await client.auth.getUser();
-
-      if (userError) throw userError;
-      if (!userData.user) throw new Error("Please login again.");
-
-      const { data, error } = await client
-        .from("transactions")
-        .delete()
-        .eq("id", id)
-        .eq("user_id", userData.user.id)
-        .select("id");
-
-      if (error) throw error;
-
-      if (!data || data.length === 0) {
-        throw new Error("Delete nahi hua. Permission check karo.");
-      }
-
-      msg("entryMsg", "Transaction deleted successfully!");
-      await loadRecords();
-
-    } catch (error) {
-      alert("Delete failed: " + (error.message || "Unknown error"));
-      button.disabled = false;
-      button.textContent = "🗑️";
     }
   }
 
@@ -188,7 +139,8 @@
 
     try {
       const { error } = await client.auth.signInWithPassword({
-        email, password
+        email,
+        password
       });
 
       if (error) {
@@ -302,14 +254,6 @@
     $("saveBtn").addEventListener("click", saveTransaction);
     $("refreshBtn").addEventListener("click", loadRecords);
 
-    // Delete button event
-    $("records").addEventListener("click", event => {
-      const button = event.target.closest(".delete-btn");
-      if (!button) return;
-
-      deleteTransaction(button.dataset.deleteId, button);
-    });
-
     document.querySelectorAll(".seg").forEach(button => {
       button.addEventListener("click", () => {
         kind = button.dataset.kind;
@@ -348,27 +292,3 @@
 
   startApp();
 })();
-      
-.record {
-  gap: 10px;
-}
-
-.delete-btn {
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 80, 80, 0.25);
-  background: rgba(255, 60, 60, 0.10);
-  color: #ff5b65;
-  border-radius: 10px;
-  padding: 9px 11px;
-  cursor: pointer;
-  font-size: 16px;
-}
-
-.delete-btn:active {
-  transform: scale(0.94);
-}
-
-.delete-btn:disabled {
-  opacity: 0.5;
-  cursor: wait;
-}
