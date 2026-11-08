@@ -21,6 +21,7 @@
 <div class="glow g2"></div>
 
 <main class="shell">
+
 <header class="topbar">
 <div class="brandmark">DM</div>
 <div class="brand">
@@ -49,6 +50,7 @@
 </section>
 
 <section id="appView" class="hidden">
+
 <div class="welcome">
 <div>
 <div class="eyebrow">SHOP OVERVIEW</div>
@@ -87,6 +89,122 @@
 </article>
 </div>
 
+<!-- DAILY SETH ACCOUNT REPORT -->
+<section class="card report-card">
+<div class="section-head">
+<div>
+<div class="eyebrow">DAILY ACCOUNT</div>
+<h2>Seth payment hisab</h2>
+</div>
+<div class="plus">₹</div>
+</div>
+
+<div class="field">
+<label>Select date</label>
+<input type="date" id="sethReportDate">
+</div>
+
+<div class="seth-grid">
+
+<article class="seth-box">
+<b>Kiran</b>
+<div class="seth-line">
+<span>Cash diya</span>
+<strong id="kiranCash">₹0</strong>
+</div>
+<div class="seth-line">
+<span>Online diya</span>
+<strong id="kiranOnline">₹0</strong>
+</div>
+<div class="seth-total">
+<span>Total</span>
+<strong id="kiranTotal">₹0</strong>
+</div>
+</article>
+
+<article class="seth-box">
+<b>Anish</b>
+<div class="seth-line">
+<span>Cash diya</span>
+<strong id="anishCash">₹0</strong>
+</div>
+<div class="seth-line">
+<span>Online diya</span>
+<strong id="anishOnline">₹0</strong>
+</div>
+<div class="seth-total">
+<span>Total</span>
+<strong id="anishTotal">₹0</strong>
+</div>
+</article>
+
+</div>
+
+<div class="daily-payment-total">
+<div>
+<span>Total Cash</span>
+<strong id="dailyCashTotal">₹0</strong>
+</div>
+<div>
+<span>Total Online</span>
+<strong id="dailyOnlineTotal">₹0</strong>
+</div>
+<div>
+<span>Grand Total</span>
+<strong id="dailySethTotal">₹0</strong>
+</div>
+</div>
+
+<p class="report-note">Only payments recorded under Seth Payment are included.</p>
+</section>
+
+<!-- MONTHLY REPORT -->
+<section class="card report-card">
+<div class="section-head">
+<div>
+<div class="eyebrow">MONTHLY ANALYTICS</div>
+<h2>Monthly report</h2>
+</div>
+<div class="plus">↗</div>
+</div>
+
+<div class="field">
+<label>Select month</label>
+<input type="month" id="reportMonth">
+</div>
+
+<div class="monthly-stats">
+<article class="monthly-box">
+<span>Monthly income</span>
+<strong id="monthlyIncome">₹0</strong>
+</article>
+
+<article class="monthly-box">
+<span>Monthly expenses</span>
+<strong id="monthlyExpense">₹0</strong>
+</article>
+
+<article class="monthly-box profit-box">
+<span>Net profit</span>
+<strong id="monthlyProfit">₹0</strong>
+</article>
+</div>
+
+<div class="monthly-details">
+<div>
+<span>Total transactions</span>
+<strong id="monthlyTransactions">0</strong>
+</div>
+<div>
+<span>Report month</span>
+<strong id="monthlyName">—</strong>
+</div>
+</div>
+
+<p class="report-note">Net profit = Monthly income − Monthly expenses.</p>
+</section>
+
+<!-- QUICK ENTRY -->
 <section class="card entry-card">
 <div class="section-head">
 <div>
@@ -104,6 +222,7 @@
 </div>
 
 <div class="form-grid">
+
 <div class="field wide">
 <label>Description</label>
 <input id="description" placeholder="e.g. Mobile repairing">
@@ -133,6 +252,7 @@
 <option>Battery</option>
 <option>Spare Parts</option>
 <option>Shop Expense</option>
+<option>Seth Payment</option>
 <option>Other</option>
 </select>
 </div>
@@ -155,12 +275,14 @@
 <label>Notes (optional)</label>
 <input id="notes" placeholder="Extra details">
 </div>
+
 </div>
 
 <button id="saveBtn" class="primary">Save transaction <span>→</span></button>
 <p id="entryMsg" class="message"></p>
 </section>
 
+<!-- HISTORY -->
 <section class="card history-card">
 <div class="section-head">
 <div>
@@ -184,6 +306,7 @@
 </section>
 
 <p class="footer-note">DM ACCESSORIES MOBILE REPAIRING • Secure shop workspace</p>
+
 </section>
 </main>
 
@@ -202,5 +325,3 @@
 <script src="app.js"></script>
 </body>
 </html>
-
-      
