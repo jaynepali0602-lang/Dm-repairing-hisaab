@@ -3,6 +3,7 @@
 "use strict";
 
 const $ = id => document.getElementById(id);
+
 const url = window.DM_SUPABASE_URL;
 const key = window.DM_SUPABASE_ANON_KEY;
 
@@ -21,9 +22,15 @@ const today = (() => {
   ].join("-");
 })();
 
+const currentMonth = today.slice(0, 7);
+
 const money = n => "₹" + Number(n || 0).toLocaleString("en-IN", {
   maximumFractionDigits: 2
 });
+
+function $(id) {
+  return document.getElementById(id);
+}
 
 function msg(id, value) {
   const el = $(id);
@@ -116,9 +123,20 @@ async function logout() {
 // TRANSACTION TYPE
 function updateKindFields() {
   const ledger = kind === "udhar" || kind === "jama";
+  const sethPayment =
+    kind === "expense" &&
+    $("category").value === "Seth Payment";
 
-  $("personField").classList.toggle("hidden", !ledger);
+  $("personField").classList.toggle(
+    "hidden",
+    !ledger && !sethPayment
+  );
+
   $("itemField").classList.toggle("hidden", !ledger);
+
+  $("personName").placeholder = sethPayment
+    ? "Enter Kiran or Anish"
+    : "Enter person name";
 
   const labels = {
     income: "Save transaction",
@@ -156,6 +174,127 @@ function updateDashboard() {
   $("jamaTotal").textContent = money(jama);
 }
 
+// CHECK SETH PAYMENT
+function isSethPayment(r) {
+  return r.kind === "expense" &&
+    String(r.category || "").trim().toLowerCase() === "seth payment";
+}
+
+// DAILY SETH REPORT
+function updateSethReport() {
+  const selectedDate =
+    $("sethReportDate").value || today;
+
+  const totals = {
+    Kiran: { Cash: 0, Online: 0 },
+    Anish: { Cash: 0, Online: 0 }
+  };
+
+  records.forEach(r => {
+    if (!isSethPayment(r)) return;
+    if (r.entry_date !== selectedDate) return;
+
+    const person = String(r.person_name || "").trim().toLowerCase();
+    const mode = String(r.payment_mode || "").trim().toLowerCase();
+    const amount = Number(r.amount || 0);
+
+    const name = person === "kiran"
+      ? "Kiran"
+      : person === "anish"
+      ? "Anish"
+      : null;
+
+    if (!name) return;
+
+    if (mode === "cash") totals[name].Cash += amount;
+    if (mode === "online") totals[name].Online += amount;
+  });
+
+  const kiranTotal =
+    totals.Kiran.Cash + totals.Kiran.Online;
+
+  const anishTotal =
+    totals.Anish.Cash + totals.Anish.Online;
+
+  const cashTotal =
+    totals.Kiran.Cash + totals.Anish.Cash;
+
+  const onlineTotal =
+    totals.Kiran.Online + totals.Anish.Online;
+
+  $("kiranCash").textContent = money(totals.Kiran.Cash);
+  $("kiranOnline").textContent = money(totals.Kiran.Online);
+  $("kiranTotal").textContent = money(kiranTotal);
+
+  $("anishCash").textContent = money(totals.Anish.Cash);
+  $("anishOnline").textContent = money(totals.Anish.Online);
+  $("anishTotal").textContent = money(anishTotal);
+
+  $("dailyCashTotal").textContent = money(cashTotal);
+  $("dailyOnlineTotal").textContent = money(onlineTotal);
+  $("dailySethTotal").textContent =
+    money(cashTotal + onlineTotal);
+}
+
+// MONTHLY REPORT
+function updateMonthlyReport() {
+  const selectedMonth =
+    $("reportMonth").value || currentMonth;
+
+  let income = 0;
+  let expense = 0;
+  let count = 0;
+
+  records.forEach(r => {
+    if (!r.entry_date ||
+        r.entry_date.slice(0, 7) !== selectedMonth) {
+      return;
+    }
+
+    if (r.kind === "income") {
+      income += Number(r.amount || 0);
+      count++;
+    }
+
+    if (r.kind === "expense") {
+      expense += Number(r.amount || 0);
+      count++;
+    }
+
+    if (r.kind === "udhar" || r.kind === "jama") {
+      count++;
+    }
+  });
+
+  const profit = income - expense;
+
+  $("monthlyIncome").textContent = money(income);
+  $("monthlyExpense").textContent = money(expense);
+  $("monthlyProfit").textContent = money(profit);
+  $("monthlyTransactions").textContent = count;
+
+  const [year, month] = selectedMonth.split("-");
+
+  const monthName = new Date(
+    Number(year),
+    Number(month) - 1,
+    1
+  ).toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric"
+  });
+
+  $("monthlyName").textContent = monthName;
+}
+
+// UPDATE ALL REPORTS
+function updateReports() {
+  updateDashboard();
+  updateSethReport();
+  updateMonthlyReport();
+}
+
+// TRANSACTION NAME
 function kindName(value) {
   return ({
     income: "Income",
@@ -178,10 +317,12 @@ function renderRecords() {
   }
 
   $("records").innerHTML = filtered.map(r => {
-    const positive = r.kind === "income" || r.kind === "jama";
+    const positive =
+      r.kind === "income" || r.kind === "jama";
 
     const date = r.entry_date
-      ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
+      ? new Date(r.entry_date + "T00:00:00")
+          .toLocaleDateString("en-IN")
       : "Date unavailable";
 
     return `
@@ -231,7 +372,7 @@ async function loadRecords() {
 
     records = data || [];
 
-    updateDashboard();
+    updateReports();
     renderRecords();
 
   } catch (error) {
@@ -260,6 +401,9 @@ async function saveTransaction() {
   const paymentMode = $("paymentMode").value;
   const notes = $("notes").value.trim();
 
+  const sethPayment =
+    kind === "expense" && category === "Seth Payment";
+
   if (!description || !Number.isFinite(amount) ||
       amount <= 0 || !date) {
     msg("entryMsg", "Enter valid description, amount and date.");
@@ -269,6 +413,22 @@ async function saveTransaction() {
   if ((kind === "udhar" || kind === "jama") && !person) {
     msg("entryMsg", "Enter person or supplier name.");
     return;
+  }
+
+  if (sethPayment) {
+    const normalizedPerson = person.toLowerCase();
+
+    if (normalizedPerson !== "kiran" &&
+        normalizedPerson !== "anish") {
+      msg("entryMsg", "Enter only Kiran or Anish as person name.");
+      return;
+    }
+
+    if (paymentMode !== "Cash" &&
+        paymentMode !== "Online") {
+      msg("entryMsg", "Seth payment mode must be Cash or Online.");
+      return;
+    }
   }
 
   $("saveBtn").disabled = true;
@@ -324,7 +484,8 @@ function showDetails(id) {
   if (!r) return;
 
   const date = r.entry_date
-    ? new Date(r.entry_date + "T00:00:00").toLocaleDateString("en-IN")
+    ? new Date(r.entry_date + "T00:00:00")
+        .toLocaleDateString("en-IN")
     : "Unavailable";
 
   const fields = [
@@ -355,9 +516,6 @@ function closeDetails() {
 
 // START APP
 function startApp() {
-
-  // Events are attached BEFORE checking configuration.
-  // This ensures the Sign in button always responds.
 
   $("loginBtn").addEventListener("click", login);
 
@@ -404,7 +562,16 @@ function startApp() {
     });
   });
 
+  $("category").addEventListener("change", () => {
+    updateKindFields();
+  });
+
+  $("sethReportDate").addEventListener("change", updateSethReport);
+  $("reportMonth").addEventListener("change", updateMonthlyReport);
+
   $("entryDate").value = today;
+  $("sethReportDate").value = today;
+  $("reportMonth").value = currentMonth;
 
   $("todayLabel").textContent =
     new Date().toLocaleDateString("en-IN", {
@@ -476,4 +643,4 @@ function startApp() {
 startApp();
 
 })();
-      
+    
