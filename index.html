@@ -1,327 +1,156 @@
-
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#080b14">
-<meta name="description" content="DM Accessories Shop Manager">
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg">
-<title>DM Shop Manager</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="stylesheet" href="style.css">
-<script src="config.js"></script>
-</head>
-<body>
-<div class="glow g1"></div>
-<div class="glow g2"></div>
 
-<main class="shell">
+<html lang="en">  
+<head>  
+<meta charset="utf-8">  
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">  
+<meta name="theme-color" content="#080b14">  
+<meta name="description" content="DM Accessories Shop Manager">  
+<link rel="manifest" href="manifest.json">  
+<link rel="icon" href="icon.svg">  
+<title>DM Shop Manager</title>  
+<link rel="preconnect" href="https://fonts.googleapis.com">  
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>  
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">  
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>  
+<link rel="stylesheet" href="style.css">  
+<script src="config.js"></script>  
+</head>  
+<body>  
+<div class="glow g1"></div>  
+<div class="glow g2"></div>  <main class="shell">  
+<header class="topbar">  
+<div class="brandmark">DM</div>  
+<div class="brand">  
+<b>DM SHOP MANAGER</b>  
+<span>ACCESSORIES • MOBILE REPAIRING</span>  
+</div>  
+<button id="logoutBtn" class="icon-btn hidden">↗</button>  
+</header>  <section id="setupNotice" class="notice hidden">  
+<b>One-time setup required</b>  
+<p>Check your Supabase configuration in config.js.</p>  
+</section>  <section id="authView" class="auth card">  
+<div class="eyebrow">IOS OR ANDROID SPECIALIST</div>  
+<h1>Welcome back<span class="blue">.</span></h1>  
+<p class="muted">Sign in to manage your shop's daily hisab.</p>  
+<label>Email address</label>  
+<input id="email" type="email" placeholder="you@example.com">  
+<label>Password</label>  
+<input id="password" type="password" placeholder="Enter password">  
+<button id="loginBtn" class="primary">Sign in <span>→</span></button>  
+<p id="authMsg" class="message"></p>  
+<div class="auth-foot">Private access • Invite-only staff accounts</div>  
+</section>  <section id="appView" class="hidden">  
+<div class="welcome">  
+<div>  
+<div class="eyebrow">SHOP OVERVIEW</div>  
+<h1>Daily hisab<span class="blue">.</span></h1>  
+<p class="muted" id="todayLabel"></p>  
+</div>  
+<div class="avatar">DM</div>  
+</div>  <div class="stats">  
+<article class="stat">  
+<span>Today's income</span>  
+<strong id="incomeTotal">₹0</strong>  
+<small>Money received</small>  
+</article>  
+<article class="stat">  
+<span>Today's expense</span>  
+<strong id="expenseTotal">₹0</strong>  
+<small>Money spent</small>  
+</article>  
+<article class="stat balance">  
+<span>Net balance</span>  
+<strong id="balanceTotal">₹0</strong>  
+<small>Income − expense</small>  
+</article>  
+</div>  <div class="ledger-stats">  
+<article class="ledger-box">  
+<span>Total Udhar remaining</span>  
+<strong id="udharTotal">₹0</strong>  
+</article>  
+<article class="ledger-box">  
+<span>Total Jama remaining</span>  
+<strong id="jamaTotal">₹0</strong>  
+</article>  
+</div>  <section class="card entry-card">  
+<div class="section-head">  
+<div>  
+<div class="eyebrow">QUICK ENTRY</div>  
+<h2>Add transaction</h2>  
+</div>  
+<div class="plus">＋</div>  
+</div>  <div class="segmented types">  
+<button class="seg active" data-kind="income">＋ Income</button>  
+<button class="seg" data-kind="expense">− Expense</button>  
+<button class="seg" data-kind="udhar">Udhar</button>  
+<button class="seg" data-kind="jama">Jama</button>  
+</div>  <div class="form-grid">  
+<div class="field wide">  
+<label>Description</label>  
+<input id="description" placeholder="e.g. Mobile repairing">  
+</div>  <div class="field wide hidden" id="personField">  
+<label>Person / Supplier name</label>  
+<input id="personName" placeholder="Enter person name">  
+</div>  <div class="field wide hidden" id="itemField">  
+<label>Item / Spare details</label>  
+<input id="itemName" placeholder="e.g. iPhone display">  
+</div>  <div class="field">  
+<label>Amount (₹)</label>  
+<input id="amount" type="number" min="1" inputmode="decimal" placeholder="0">  
+</div>  <div class="field">  
+<label>Category</label>  
+<select id="category">  
+<option>Repairing</option>  
+<option>Accessories</option>  
+<option>Display</option>  
+<option>Battery</option>  
+<option>Spare Parts</option>  
+<option>Shop Expense</option>  
+<option>Other</option>  
+</select>  
+</div>  <div class="field wide">  
+<label>Payment mode</label>  
+<select id="paymentMode">  
+<option value="Cash">Cash</option>  
+<option value="Online">Online</option>  
+<option value="Other">Other</option>  
+</select>  
+</div>  <div class="field wide">  
+<label>Date</label>  
+<input id="entryDate" type="date">  
+</div>  <div class="field wide">  
+<label>Notes (optional)</label>  
+<input id="notes" placeholder="Extra details">  
+</div>  
+</div>  <button id="saveBtn" class="primary">Save transaction <span>→</span></button>
 
-<header class="topbar">
-<div class="brandmark">DM</div>
-<div class="brand">
-<b>DM SHOP MANAGER</b>
-<span>ACCESSORIES • MOBILE REPAIRING</span>
-</div>
-<button id="logoutBtn" class="icon-btn hidden">↗</button>
-</header>
-
-<section id="setupNotice" class="notice hidden">
-<b>One-time setup required</b>
-<p>Check your Supabase configuration in config.js.</p>
-</section>
-
-<section id="authView" class="auth card">
-<div class="eyebrow">IOS OR ANDROID SPECIALIST</div>
-<h1>Welcome back<span class="blue">.</span></h1>
-<p class="muted">Sign in to manage your shop's daily hisab.</p>
-<label>Email address</label>
-<input id="email" type="email" placeholder="you@example.com">
-<label>Password</label>
-<input id="password" type="password" placeholder="Enter password">
-<button id="loginBtn" class="primary">Sign in <span>→</span></button>
-<p id="authMsg" class="message"></p>
-<div class="auth-foot">Private access • Invite-only staff accounts</div>
-</section>
-
-<section id="appView" class="hidden">
-
-<div class="welcome">
-<div>
-<div class="eyebrow">SHOP OVERVIEW</div>
-<h1>Daily hisab<span class="blue">.</span></h1>
-<p class="muted" id="todayLabel"></p>
-</div>
-<div class="avatar">DM</div>
-</div>
-
-<div class="stats">
-<article class="stat">
-<span>Today's income</span>
-<strong id="incomeTotal">₹0</strong>
-<small>Money received</small>
-</article>
-<article class="stat">
-<span>Today's expense</span>
-<strong id="expenseTotal">₹0</strong>
-<small>Money spent</small>
-</article>
-<article class="stat balance">
-<span>Net balance</span>
-<strong id="balanceTotal">₹0</strong>
-<small>Income − expense</small>
-</article>
-</div>
-
-<div class="ledger-stats">
-<article class="ledger-box">
-<span>Total Udhar remaining</span>
-<strong id="udharTotal">₹0</strong>
-</article>
-<article class="ledger-box">
-<span>Total Jama remaining</span>
-<strong id="jamaTotal">₹0</strong>
-</article>
-</div>
-
-<!-- DAILY SETH ACCOUNT REPORT -->
-<section class="card report-card">
-<div class="section-head">
-<div>
-<div class="eyebrow">DAILY ACCOUNT</div>
-<h2>Seth payment hisab</h2>
-</div>
-<div class="plus">₹</div>
-</div>
-
-<div class="field">
-<label>Select date</label>
-<input type="date" id="sethReportDate">
-</div>
-
-<div class="seth-grid">
-
-<article class="seth-box">
-<b>Kiran</b>
-<div class="seth-line">
-<span>Cash diya</span>
-<strong id="kiranCash">₹0</strong>
-</div>
-<div class="seth-line">
-<span>Online diya</span>
-<strong id="kiranOnline">₹0</strong>
-</div>
-<div class="seth-total">
-<span>Total</span>
-<strong id="kiranTotal">₹0</strong>
-</div>
-</article>
-
-<article class="seth-box">
-<b>Anish</b>
-<div class="seth-line">
-<span>Cash diya</span>
-<strong id="anishCash">₹0</strong>
-</div>
-<div class="seth-line">
-<span>Online diya</span>
-<strong id="anishOnline">₹0</strong>
-</div>
-<div class="seth-total">
-<span>Total</span>
-<strong id="anishTotal">₹0</strong>
-</div>
-</article>
-
-</div>
-
-<div class="daily-payment-total">
-<div>
-<span>Total Cash</span>
-<strong id="dailyCashTotal">₹0</strong>
-</div>
-<div>
-<span>Total Online</span>
-<strong id="dailyOnlineTotal">₹0</strong>
-</div>
-<div>
-<span>Grand Total</span>
-<strong id="dailySethTotal">₹0</strong>
-</div>
-</div>
-
-<p class="report-note">Only payments recorded under Seth Payment are included.</p>
-</section>
-
-<!-- MONTHLY REPORT -->
-<section class="card report-card">
-<div class="section-head">
-<div>
-<div class="eyebrow">MONTHLY ANALYTICS</div>
-<h2>Monthly report</h2>
-</div>
-<div class="plus">↗</div>
-</div>
-
-<div class="field">
-<label>Select month</label>
-<input type="month" id="reportMonth">
-</div>
-
-<div class="monthly-stats">
-<article class="monthly-box">
-<span>Monthly income</span>
-<strong id="monthlyIncome">₹0</strong>
-</article>
-
-<article class="monthly-box">
-<span>Monthly expenses</span>
-<strong id="monthlyExpense">₹0</strong>
-</article>
-
-<article class="monthly-box profit-box">
-<span>Net profit</span>
-<strong id="monthlyProfit">₹0</strong>
-</article>
-</div>
-
-<div class="monthly-details">
-<div>
-<span>Total transactions</span>
-<strong id="monthlyTransactions">0</strong>
-</div>
-<div>
-<span>Report month</span>
-<strong id="monthlyName">—</strong>
-</div>
-</div>
-
-<p class="report-note">Net profit = Monthly income − Monthly expenses.</p>
-</section>
-
-<!-- QUICK ENTRY -->
-<section class="card entry-card">
-<div class="section-head">
-<div>
-<div class="eyebrow">QUICK ENTRY</div>
-<h2>Add transaction</h2>
-</div>
-<div class="plus">＋</div>
-</div>
-
-<div class="segmented types">
-<button class="seg active" data-kind="income">＋ Income</button>
-<button class="seg" data-kind="expense">− Expense</button>
-<button class="seg" data-kind="udhar">Udhar</button>
-<button class="seg" data-kind="jama">Jama</button>
-</div>
-
-<div class="form-grid">
-
-<div class="field wide">
-<label>Description</label>
-<input id="description" placeholder="e.g. Mobile repairing">
-</div>
-
-<div class="field wide hidden" id="personField">
-<label>Person / Supplier name</label>
-<input id="personName" placeholder="Enter person name">
-</div>
-
-<div class="field wide hidden" id="itemField">
-<label>Item / Spare details</label>
-<input id="itemName" placeholder="e.g. iPhone display">
-</div>
-
-<div class="field">
-<label>Amount (₹)</label>
-<input id="amount" type="number" min="1" inputmode="decimal" placeholder="0">
-</div>
-
-<div class="field">
-<label>Category</label>
-<select id="category">
-<option>Repairing</option>
-<option>Accessories</option>
-<option>Display</option>
-<option>Battery</option>
-<option>Spare Parts</option>
-<option>Shop Expense</option>
-<option>Seth Payment</option>
-<option>Other</option>
-</select>
-</div>
-
-<div class="field wide">
-<label>Payment mode</label>
-<select id="paymentMode">
-<option value="Cash">Cash</option>
-<option value="Online">Online</option>
-<option value="Other">Other</option>
-</select>
-</div>
-
-<div class="field wide">
-<label>Date</label>
-<input id="entryDate" type="date">
-</div>
-
-<div class="field wide">
-<label>Notes (optional)</label>
-<input id="notes" placeholder="Extra details">
-</div>
-
-</div>
-
-<button id="saveBtn" class="primary">Save transaction <span>→</span></button>
-<p id="entryMsg" class="message"></p>
-</section>
-
-<!-- HISTORY -->
-<section class="card history-card">
-<div class="section-head">
-<div>
-<div class="eyebrow">YOUR RECORDS</div>
-<h2>Recent transactions</h2>
-</div>
-<button id="refreshBtn" class="text-btn">Refresh ↻</button>
-</div>
-
-<div class="filters">
-<button class="filter active" data-filter="all">All</button>
-<button class="filter" data-filter="income">Income</button>
-<button class="filter" data-filter="expense">Expenses</button>
-<button class="filter" data-filter="udhar">Udhar</button>
-<button class="filter" data-filter="jama">Jama</button>
-</div>
-
-<div id="records" class="records">
-<div class="empty">Your transactions will appear here.</div>
-</div>
-</section>
-
-<p class="footer-note">DM ACCESSORIES MOBILE REPAIRING • Secure shop workspace</p>
-
-</section>
-</main>
-
-<div id="detailModal" class="modal hidden">
-<div class="modal-card">
-<div class="modal-head">
-<h2>Transaction details</h2>
-<button id="closeModal" class="close-btn">✕</button>
-</div>
-<div id="detailContent"></div>
-</div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<script src="app.js"></script>
-</body>
-</html>
+<p id="entryMsg" class="message"></p>  
+</section>  <section class="card history-card">  
+<div class="section-head">  
+<div>  
+<div class="eyebrow">YOUR RECORDS</div>  
+<h2>Recent transactions</h2>  
+</div>  
+<button id="refreshBtn" class="text-btn">Refresh ↻</button>  
+</div>  <div class="filters">  
+<button class="filter active" data-filter="all">All</button>  
+<button class="filter" data-filter="income">Income</button>  
+<button class="filter" data-filter="expense">Expenses</button>  
+<button class="filter" data-filter="udhar">Udhar</button>  
+<button class="filter" data-filter="jama">Jama</button>  
+</div>  <div id="records" class="records">  
+<div class="empty">Your transactions will appear here.</div>  
+</div>  
+</section>  <p class="footer-note">DM ACCESSORIES MOBILE REPAIRING • Secure shop workspace</p>  
+</section>  
+</main>  <div id="detailModal" class="modal hidden">  
+<div class="modal-card">  
+<div class="modal-head">  
+<h2>Transaction details</h2>  
+<button id="closeModal" class="close-btn">✕</button>  
+</div>  
+<div id="detailContent"></div>  
+</div>  
+</div>  <div id="toast" class="toast"></div>  <script src="app.js"></script>  </body>  
+</html>  
